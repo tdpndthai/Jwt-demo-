@@ -1,9 +1,11 @@
 package accountapi
 
 import (
+	"config"
 	"encoding/json"
 	"entities"
 	"fmt"
+	"models"
 
 	//"log"
 	"net/http"
@@ -21,6 +23,7 @@ func GenerateToken(response http.ResponseWriter, request *http.Request) {
 		respondWithError(response, http.StatusBadRequest, err.Error())
 	} else {
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"id" : account.ID,
 			"username": account.Username,
 			"password": account.Password,
 			"exp":      time.Now().Add(time.Minute * 5).Unix(), //thời gian sống là 5 phút
@@ -70,6 +73,46 @@ func GetInfoFromToken(w http.ResponseWriter, r *http.Request) {
 	jsonString, _ := json.Marshal(claim)
 	fmt.Println(jsonString)
 	respondWithJSON(w, http.StatusOK, string(jsonString))
+}
+
+func Create(response http.ResponseWriter, request *http.Request) {
+	var acc entities.Account
+	err := json.NewDecoder(request.Body).Decode(&acc)
+
+	db, err := config.GetDB()
+	if err != nil {
+		respondWithError(response, http.StatusBadRequest, err.Error())
+	} else {
+		accountModel := models.AccountModel{
+			Db: db,
+		}
+		err2 := accountModel.CreateAccount(&acc) 
+		if err2 != nil {
+			respondWithError(response, http.StatusBadRequest, err2.Error())
+		} else {
+			respondWithJSON(response, http.StatusOK, acc)
+		}
+	}
+}
+
+func Update(response http.ResponseWriter, request *http.Request) {
+	var acc entities.Account
+	err := json.NewDecoder(request.Body).Decode(&acc)
+
+	db, err := config.GetDB()
+	if err != nil {
+		respondWithError(response, http.StatusBadRequest, err.Error())
+	} else {
+		accountModel := models.AccountModel{
+			Db: db,
+		}
+		_,err2 := accountModel.UpdateAccount(&acc) 
+		if err2 != nil {
+			respondWithError(response, http.StatusBadRequest, err2.Error())
+		} else {
+			respondWithJSON(response, http.StatusOK, acc)
+		}
+	}
 }
 
 func respondWithError(w http.ResponseWriter, code int, msg string) {
